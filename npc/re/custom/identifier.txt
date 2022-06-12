@@ -1,0 +1,41 @@
+prontera,164,169,3	script	Item Helper	1_M_01,{
+getinventorylist;
+mes " Identifying equipment costs " + .identifyprice + " Zeny per item";
+menu "^0055FFIdentify^000000",beginidentify,"^777777Cancel^000000",closedialog;
+close;
+
+beginidentify:
+if (countitem(611)) {
+	for(set .@i,0; .@i<@inventorylist_count; set .@i,.@i+1) {
+		if (@inventorylist_identify[.@i]) continue;
+			delitem2 @inventorylist_id[.@i],1,0,0,0,0,0,0,0;
+			getitem @inventorylist_id[.@i],1; 
+			delitem 611,1; 
+			message strcharinfo(0), "Identified using magnifier.";}
+			dispbottom "Identified "+.@Total[0]+" items.";
+close; }
+
+if (Zeny < .identifyprice) {
+	next;
+	mes "You have no zeny or magnifier.";
+	close; }
+for(set .@i,0; .@i<@inventorylist_count; set .@i,.@i+1) {
+	if (@inventorylist_identify[.@i]) continue; 
+		set Zeny, Zeny-.identifyprice;
+		delitem2 @inventorylist_id[.@i],1,0,0,0,0,0,0,0;
+		getitem @inventorylist_id[.@i],1;
+		setarray .@Total[0], .@Total[0]+1, .@Total[1]+.identifyprice; }
+	if (!.@Total[0]) {
+		next;
+		mes "You have no items to identify.";
+	close; }
+dispbottom "Identified "+.@Total[0]+" items"+((.@Total[1])?" for "+.@Total[1]+" Zeny":"")+".";
+close; 
+
+closedialog:
+	close;
+ 
+OnInit:
+    .identifyprice = 50;    // Zeny to deduct for identifying items
+    end;
+}

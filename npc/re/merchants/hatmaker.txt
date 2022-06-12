@@ -1,0 +1,39 @@
+
+
+//= Hatmaker Merchant Shop
+//============================================================
+-	script	#hat_barter	HIDDEN_NPC,{
+	mes "[Arrow Merchant]";
+	mes "Hi!";
+	mes "Do you want to buy arrows or exchange the quiver?";
+	next;
+	switch ( select( "Buy Arrows", "Hat Exchanger", "Sell Items", "Cancel" )) {
+	case 1:
+		close2;
+		break;
+	case 2:
+		close2;
+		callshop "Barter_Headgears", 1;
+		break;
+	case 3:
+		close2;
+		break;
+	case 4:
+		mes "[Arrow Merchant]";
+		mes "You can take a look at other things more calmly.";
+		close;
+	}
+	end;
+	
+OnInit:
+	setunitdata getnpcid(0),UNPC_GROUP_ID,7;
+	end;
+}
+
+
+
+//= Duplicate of Prontera
+//============================================================
+
+prontera,151,161,5	duplicate(#hat_barter)	Hatmaker#hat_barter_0	4_M_ARCHER
+

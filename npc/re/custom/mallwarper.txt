@@ -1,0 +1,37 @@
+//== @mall script =================================================
+//==This is a custom script that teleports the player to the mall.
+-	script	atmallwarper	-1,{
+OnInit:	bindatcmd "mall", strnpcinfo(0)+"::Onaaa";	
+end;
+Onaaa:	dispbottom "Warped to mall.";
+warp "itemmall",21,44;
+end;}
+
+-	script	atedenwarper	-1,{
+OnInit:	bindatcmd "eden", strnpcinfo(0)+"::Onaaa";	
+end;
+Onaaa:	dispbottom "Warped to eden group.";
+warp "moc_para01",31,14;
+end;}
+
+//== Map Portals =================================================
+
+itemmall,21,39,0	warp	prontera	1,1,prontera,156,191
+itemmall,21,39,0	warp	prontera	1,1,prontera,156,191
+
+//== NPC Scripts =================================================
+prontera,155,184,0	script	Mall Warper	4_F_PINKWOMAN,{
+	mes "[Warper]";
+	mes "Hi there! Do you want to go to the mall?";
+	menu "~Yes",begintele,"~No",beginclose;
+	close;
+
+begintele:
+	dispbottom "Warped to mall.";
+	warp "itemmall",21,44;
+	close;
+	end;
+
+beginclose:
+	close;
+}
