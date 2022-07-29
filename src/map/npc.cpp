@@ -833,8 +833,6 @@ void BarterDatabase::loadingFinished(){
 			}
 		}
 	}
-
-	TypesafeYamlDatabase::loadingFinished();
 }
 
 BarterDatabase barter_db;
@@ -2343,7 +2341,7 @@ static enum e_CASHSHOP_ACK npc_cashshop_process_payment(struct npc_data *nd, int
 			break;
 		case NPCTYPE_ITEMSHOP:
 			{
-				std::shared_ptr<item_data> id = item_db.find(nd->u.shop.itemshop_nameid);
+				struct item_data *id = itemdb_exists(nd->u.shop.itemshop_nameid);
 				int delete_amount = price, i;
 
 				if (!id) { // Item Data is checked at script parsing but in case of item_db reload, check again.
@@ -2418,6 +2416,7 @@ int npc_cashshop_buylist( struct map_session_data *sd, int points, std::vector<s
 	t_itemid nameid;
 	struct npc_data *nd = (struct npc_data *)map_id2bl(sd->npc_shopid);
 	enum e_CASHSHOP_ACK res;
+	item_data *id;
 
 	if( !nd || ( nd->subtype != NPCTYPE_CASHSHOP && nd->subtype != NPCTYPE_ITEMSHOP && nd->subtype != NPCTYPE_POINTSHOP ) )
 		return ERROR_TYPE_NPC;
@@ -2433,8 +2432,7 @@ int npc_cashshop_buylist( struct map_session_data *sd, int points, std::vector<s
 	{
 		nameid = item_list[i].nameid;
 		amount = item_list[i].qty;
-
-		std::shared_ptr<item_data> id = item_db.find(nameid);
+		id = itemdb_exists(nameid);
 
 		if( !id || amount <= 0 )
 			return ERROR_TYPE_ITEM_ID;
@@ -2445,7 +2443,7 @@ int npc_cashshop_buylist( struct map_session_data *sd, int points, std::vector<s
 
 		nameid = item_list[i].nameid = nd->u.shop.shop_item[j].nameid; //item_avail replacement
 
-		if( !itemdb_isstackable2(id.get()) && amount > 1 )
+		if( !itemdb_isstackable2(id) && amount > 1 )
 		{
 			ShowWarning("Player %s (%d:%d) sent a hexed packet trying to buy %d of nonstackable item %u!\n", sd->status.name, sd->status.account_id, sd->status.char_id, amount, nameid);
 			amount = item_list[i].qty = 1;
@@ -2529,7 +2527,7 @@ void npc_shop_currency_type(struct map_session_data *sd, struct npc_data *nd, in
 		case NPCTYPE_ITEMSHOP:
 		{
 			int total = 0, i;
-			std::shared_ptr<item_data> id = item_db.find(nd->u.shop.itemshop_nameid);
+			struct item_data *id = itemdb_exists(nd->u.shop.itemshop_nameid);
 
 			if (id) { // Item Data is checked at script parsing but in case of item_db reload, check again.
 				if (display) {
@@ -2576,6 +2574,7 @@ void npc_shop_currency_type(struct map_session_data *sd, struct npc_data *nd, in
 int npc_cashshop_buy(struct map_session_data *sd, t_itemid nameid, int amount, int points)
 {
 	struct npc_data *nd = (struct npc_data *)map_id2bl(sd->npc_shopid);
+	struct item_data *item;
 	int i, price, w;
 	enum e_CASHSHOP_ACK res;
 
@@ -2591,9 +2590,7 @@ int npc_cashshop_buy(struct map_session_data *sd, t_itemid nameid, int amount, i
 	if( sd->state.trading )
 		return ERROR_TYPE_EXCHANGE;
 
-	std::shared_ptr<item_data> id = item_db.find(nameid);
-
-	if( id == nullptr )
+	if( (item = itemdb_exists(nameid)) == NULL )
 		return ERROR_TYPE_ITEM_ID; // Invalid Item
 
 	ARR_FIND(0, nd->u.shop.count, i, nd->u.shop.shop_item[i].nameid == nameid || itemdb_viewid(nd->u.shop.shop_item[i].nameid) == nameid);
@@ -2604,7 +2601,7 @@ int npc_cashshop_buy(struct map_session_data *sd, t_itemid nameid, int amount, i
 
 	nameid = nd->u.shop.shop_item[i].nameid; //item_avail replacement
 
-	if(!itemdb_isstackable2(id.get()) && amount > 1)
+	if(!itemdb_isstackable2(item) && amount > 1)
 	{
 		ShowWarning("Player %s (%d:%d) sent a hexed packet trying to buy %d of nonstackable item %u!\n",
 			sd->status.name, sd->status.account_id, sd->status.char_id, amount, nameid);
@@ -2614,20 +2611,20 @@ int npc_cashshop_buy(struct map_session_data *sd, t_itemid nameid, int amount, i
 	switch( pc_checkadditem(sd, nameid, amount) )
 	{
 		case CHKADDITEM_NEW:
-			if( pc_inventoryblank(sd) < id->inventorySlotNeeded(amount) )
+			if( pc_inventoryblank(sd) < item->inventorySlotNeeded(amount) )
 				return ERROR_TYPE_INVENTORY_WEIGHT;
 			break;
 		case CHKADDITEM_OVERAMOUNT:
 			return ERROR_TYPE_INVENTORY_WEIGHT;
 	}
 
-	w = id->weight * amount;
+	w = item->weight * amount;
 	if( w + sd->weight > sd->max_weight )
 		return ERROR_TYPE_INVENTORY_WEIGHT;
 
 	if( (double)nd->u.shop.shop_item[i].value * amount > INT_MAX )
 	{
-		ShowWarning("npc_cashshop_buy: Item '%s' (%u) price overflow attempt!\n", id->name.c_str(), nameid);
+		ShowWarning("npc_cashshop_buy: Item '%s' (%u) price overflow attempt!\n", item->name.c_str(), nameid);
 		ShowDebug("(NPC:'%s' (%s,%d,%d), player:'%s' (%d/%d), value:%d, amount:%d)\n",
 					nd->exname, map_mapid2mapname(nd->bl.m), nd->bl.x, nd->bl.y, sd->status.name, sd->status.account_id, sd->status.char_id, nd->u.shop.shop_item[i].value, amount);
 		return ERROR_TYPE_ITEM_ID;
@@ -2648,7 +2645,7 @@ int npc_cashshop_buy(struct map_session_data *sd, t_itemid nameid, int amount, i
 		item_tmp.nameid = nameid;
 		item_tmp.identify = 1;
 
-		if (id->flag.guid)
+		if (item->flag.guid)
 			get_amt = 1;
 
 		for (int j = 0; j < amount; j += get_amt)
@@ -2723,6 +2720,7 @@ e_purchase_result npc_buylist( struct map_session_data* sd, std::vector<s_npc_bu
 		t_itemid nameid;
 		unsigned short amount;
 		int value;
+		item_data *id;
 
 		// find this entry in the shop's sell list
 		ARR_FIND( 0, nd->u.shop.count, j,
@@ -2744,13 +2742,12 @@ e_purchase_result npc_buylist( struct map_session_data* sd, std::vector<s_npc_bu
 		amount = item_list[i].qty;
 		nameid = item_list[i].nameid = shop[j].nameid; //item_avail replacement
 		value = shop[j].value;
-
-		std::shared_ptr<item_data> id = item_db.find(nameid);
+		id = itemdb_exists(nameid);
 
 		if( !id )
 			return e_purchase_result::PURCHASE_FAIL_COUNT; // item no longer in itemdb
 
-		if( !itemdb_isstackable2(id.get()) && amount > 1 ) { //Exploit? You can't buy more than 1 of equipment types o.O
+		if( !itemdb_isstackable2(id) && amount > 1 ) { //Exploit? You can't buy more than 1 of equipment types o.O
 			ShowWarning("Player %s (%d:%d) sent a hexed packet trying to buy %d of nonstackable item %u!\n",
 				sd->status.name, sd->status.account_id, sd->status.char_id, amount, nameid);
 			amount = item_list[i].qty = 1;
@@ -3047,7 +3044,7 @@ e_purchase_result npc_barter_purchase( struct map_session_data& sd, std::shared_
 	uint32 requiredItems[MAX_INVENTORY] = { 0 };
 
 	for( s_barter_purchase& purchase : purchases ){
-		purchase.data = item_db.find( purchase.item->nameid ).get();
+		purchase.data = itemdb_exists( purchase.item->nameid );
 
 		if( purchase.data == nullptr ){
 			return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
@@ -3072,13 +3069,14 @@ e_purchase_result npc_barter_purchase( struct map_session_data& sd, std::shared_
 
 		for( const auto& requirementPair : purchase.item->requirements ){
 			std::shared_ptr<s_npc_barter_requirement> requirement = requirementPair.second;
-			std::shared_ptr<item_data> id = item_db.find(requirement->nameid);
+
+			item_data* id = itemdb_exists( requirement->nameid );
 
 			if( id == nullptr ){
 				return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
 			}
 
-			if( itemdb_isstackable2( id.get() ) ){
+			if( itemdb_isstackable2( id ) ){
 				int j;
 
 				for( j = 0; j < MAX_INVENTORY; j++ ){
@@ -3985,6 +3983,7 @@ static const char* npc_parse_shop(char* w1, char* w2, char* w3, char* w4, const 
 		t_itemid nameid2;
 		int32 qty = -1;
 		int value;
+		struct item_data* id;
 		bool skip = false;
 
 		if( p == NULL )
@@ -4009,9 +4008,7 @@ static const char* npc_parse_shop(char* w1, char* w2, char* w3, char* w4, const 
 		if (skip)
 			break;
 
-		std::shared_ptr<item_data> id = item_db.find(nameid2);
-
-		if( id == nullptr ) {
+		if( (id = itemdb_exists(nameid2)) == NULL ) {
 			ShowWarning("npc_parse_shop: Invalid sell item in file '%s', line '%d' (id '%u').\n", filepath, strline(buffer,start-buffer), nameid2);
 			p = strchr(p+1,',');
 			continue;
@@ -4957,7 +4954,7 @@ int npc_do_atcmd_event(struct map_session_data* sd, const char* command, const c
 
 	for( i = 0; i < ( strlen( message ) + 1 ) && k < 127; i ++ ) {
 		if( message[i] == ' ' || message[i] == '\0' ) {
-			if (i > 0 && message[i - 1] == ' ') {
+			if( message[ ( i - 1 ) ] == ' ' ) {
 				continue; // To prevent "@atcmd [space][space]" and .@atcmd_numparameters return 1 without any parameter.
 			}
 			temp[k] = '\0';
