@@ -101,6 +101,7 @@ Attack: Weapon's attack.
 ---------------------------------------
 
 MagicAttack: Weapon's magic attack. (Renewal only)
+             Unlike matk bonus from equipment, MagicAttack is taken into account in weapon variance calculation on Renewal.
 
 ---------------------------------------
 
@@ -216,6 +217,10 @@ EquipLevelMax: Only able to equip if base level is lower than this.
 ---------------------------------------
 
 Refineable: Defines if the item can be refined.
+
+---------------------------------------
+
+Gradable: Defines if the item can be graded.
 
 ---------------------------------------
 

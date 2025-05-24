@@ -71,7 +71,7 @@ Body:
       mobinfo: true
       iteminfo: true
       whodrops: true
-      time: true
+      servertime: true
       jailtime: true
       hominfo: true
       homstats: true
@@ -195,7 +195,7 @@ Body:
       fakename: true
       option: true
       speed: true
-      warp: true
+      mapmove: true
       kill: true
       recall: true
       ban: true
@@ -216,6 +216,7 @@ Body:
       hack_info: true
       any_warp: true
       view_hpmeter: true
+      macro_detect: true
   - Id: 99
     Name: Admin
     Level: 99
@@ -238,6 +239,8 @@ Body:
       item_unconditional: false
       bypass_stat_onclone: true
       bypass_max_stat: true
+      macro_register: true
+      trade_unconditional: true
       #all_permission: true
 
 Footer:
